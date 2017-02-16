@@ -13,7 +13,7 @@ read_template = function(name)
 
 vectorize_1d_sys = function(sys)
 {
-  if (grepl("\\[\\s*\\d+\\s*\\]", sys)) return(sys)
+  if (grepl("\\[\\.*\\]", sys)) return(sys)
   sys = gsub("\\bx\\b", "x[0]", sys)
   sys = gsub("\\bdxdt\\b", "dxdt[0]", sys)
   return(sys)
@@ -29,6 +29,12 @@ make_stepper_constr = function(method, atol, rtol)
   if (grepl("_i$", method))
     stepper_constr = paste0("odeint::make_dense_output(", atol, ", ", rtol, ", stepper_type())") 
   return(stepper_constr)
+}
+
+make_stepper_type_openmp = function(stepper)
+{
+  stepper = make_stepper_type(stepper)
+  sub(">", ", double, state_type, double, odeint::openmp_range_algebra>", stepper)
 }
 
 make_stepper_type = function(stepper)
@@ -103,7 +109,7 @@ Jacobian1 = function(f)
     if (grepl(paste0("\\b", vn, "\\b"), es))
     {
       es = gsub("\\[\\s*(\\d+)\\s*\\]", paste0(sep, "\\1"), es)
-      de = deparse(D(parse(text = es), vn))
+      de = deparse(stats::D(parse(text = es), vn))
       de = gsub(paste0("\\bx", sep, "(\\d+)"), "x\\[\\1\\]", de)
       e[[i]] = parse(text = de)
     }
@@ -133,7 +139,7 @@ Jacobian2 = function(code, sys_dim = -1)
   g = function(j, i, rhs)
   {
     var = paste0("x", sep, j - 1)
-    deriv = D(parse(text = rhs), var)
+    deriv = stats::D(parse(text = rhs), var)
     deriv = deparse(deriv)
     deriv = gsub(paste0("\\bx", sep, "(\\d+)"), "x\\[\\1\\]", deriv)
     deriv = paste0("J(", i - 1, ", ", j - 1, ") = ", deriv, ";") 

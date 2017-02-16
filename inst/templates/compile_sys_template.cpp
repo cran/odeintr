@@ -1,6 +1,8 @@
 // Copyright Timothy H. Keitt 2015
 // See license for odeintr package
 
+// [[Rcpp::depends(odeintr)]]
+
 #include <Rcpp.h>
 // [[Rcpp::plugins(cpp11)]]
 
@@ -13,23 +15,22 @@ __HEADERS__;
 namespace odeintr
 {
   static const std::size_t N = __SYS_SIZE__;
+
+  typedef std::vector<double> state_type;
   
-//  using state_type = std::array<double, N>;
-  typedef std::array<double> state_type;
+  static state_type state(N);
   
-  static state_type state;
-  
-//  using stepper_type = odeint::__STEPPER_TYPE__;
   typedef odeint::__STEPPER_TYPE__ stepper_type;
   
   static auto stepper = __STEPPER_CONSTRUCT__;
   
-//  using vec_type = std::vector<double>;
   typedef std::vector<double> vec_type;
-  static std::array<vec_type, N> rec_x;
+  static std::vector<vec_type> rec_x(N);
   static vec_type rec_t;
   
   __GLOBALS__;
+  
+  #include "utils.h"
   
   static void
   sys(const state_type x, state_type &dxdt, const double t)
@@ -85,7 +86,7 @@ void __FUNCNAME___set_state(Rcpp::NumericVector new_state)
 std::vector<double>
 __FUNCNAME___get_state()
 {
-  return std::vector<double>(odeintr::state.begin(), odeintr::state.end());
+  return odeintr::state;
 }
 
 // [[Rcpp::export]]

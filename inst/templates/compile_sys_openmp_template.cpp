@@ -2,20 +2,24 @@
 // See license for odeintr package
 
 // [[Rcpp::depends(odeintr)]]
+// [[Rcpp::depends(BH)]]
 
 #include <Rcpp.h>
 // [[Rcpp::plugins(cpp11)]]
 
-// [[Rcpp::depends(BH)]]
+#include <omp.h>
+// [[Rcpp::plugins(openmp)]]
+
 #include "boost/numeric/odeint.hpp"
+#include "boost/numeric/odeint/external/openmp/openmp.hpp"
 namespace odeint = boost::numeric::odeint;
 
 __HEADERS__;
 
 namespace odeintr
 {
-  static const std::size_t N = __SYS_SIZE__;
-  
+  static const int N = __SYS_SIZE__;
+
   typedef std::vector<double> state_type;
   
   static state_type state(N);
@@ -24,12 +28,9 @@ namespace odeintr
   
   static auto stepper = __STEPPER_CONSTRUCT__;
   
-  typedef Rcpp::List vec_type;
-  typedef std::vector<vec_type> rec_type;
-  static rec_type rec_x;
-  static std::vector<double> rec_t;
-  
-  static Rcpp::Function recf("c"), proc("c");
+  typedef std::vector<double> vec_type;
+  static std::vector<vec_type> rec_x(N);
+  static vec_type rec_t;
   
   __GLOBALS__;
   
@@ -44,21 +45,18 @@ namespace odeintr
   static void
   obs(const state_type x, const double t)
   {
-    Rcpp::List rec = recf(x, t);
-    if (rec.length() != 0)
-    {
-      rec_x.push_back(rec);
-      rec_t.push_back(t);
-    }
+    for (int i = 0; i < N; ++i)
+      rec_x[i].push_back(x[i]);
+    rec_t.push_back(t);
   }
   
 }; // namespace odeintr
 
 static void
-reserve(int n)
+reserve(odeintr::vec_type::size_type n)
 {
   odeintr::rec_t.reserve(n);
-  odeintr::rec_x.reserve(n);
+  for (auto &i : odeintr::rec_x) i.reserve(n);
 }
 
 // [[Rcpp::export]]
@@ -66,8 +64,16 @@ Rcpp::List __FUNCNAME___get_output()
 {
   Rcpp::List out;
   out("Time") = Rcpp::wrap(odeintr::rec_t);
-  out("X") = Rcpp::wrap(odeintr::rec_x);
-  return odeintr::proc(out);
+  for (int i = 0; i < odeintr::N; ++i)
+  {
+    auto cnam = std::string("X") + std::to_string(i + 1);
+    out(cnam) = Rcpp::wrap(odeintr::rec_x[i]);
+  }
+  out.attr("class") = "data.frame";
+  int rows_out = odeintr::rec_t.size();
+  auto rn = Rcpp::IntegerVector::create(NA_INTEGER, -rows_out);
+  out.attr("row.names") = rn;
+  return out;
 };
 
 // [[Rcpp::export]]
@@ -90,7 +96,7 @@ __FUNCNAME___get_state()
 // [[Rcpp::export]]
 void __FUNCNAME___reset_observer()
 {
-  odeintr::rec_x.resize(0);
+  for (auto &i : odeintr::rec_x) i.resize(0);
   odeintr::rec_t.resize(0);  
 }
 
@@ -161,34 +167,6 @@ __FUNCNAME___no_record(Rcpp::NumericVector init,
   odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state,
                              start, start + duration, step_size);
   return __FUNCNAME___get_state();
-}
-
-// [[Rcpp::export]]
-Rcpp::Function
-__FUNCNAME___get_observer()
-{
-  return odeintr::recf;
-}
-
-// [[Rcpp::export]]
-void
-__FUNCNAME___set_observer(Rcpp::Function f)
-{
-  odeintr::recf = f;
-}
-
-// [[Rcpp::export]]
-Rcpp::Function
-__FUNCNAME___get_output_processor()
-{
-  return odeintr::proc;
-}
-
-// [[Rcpp::export]]
-void
-__FUNCNAME___set_output_processor(Rcpp::Function f)
-{
-  odeintr::proc = f;
 }
 
 __FOOTERS__;
