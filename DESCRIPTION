@@ -1,8 +1,8 @@
 Package: odeintr
 Type: Package
 Title: C++ ODE Solvers Compiled on-Demand
-Version: 1.7.0
-Date: 2017-02-03
+Version: 1.7.1
+Date: 2017-03-28
 Author: Timothy H. Keitt
 Maintainer: Timothy H. Keitt <tkeitt@gmail.com>
 Description: Wraps the Boost odeint library for integration of differential
@@ -14,7 +14,8 @@ Imports: Rcpp (>= 0.10.0)
 LinkingTo: Rcpp, BH
 Suggests: testthat, BH
 RoxygenNote: 6.0.1
+SystemRequirements: C++11
 NeedsCompilation: yes
-Packaged: 2017-02-16 16:14:33 UTC; tkeitt
+Packaged: 2017-03-29 15:58:40 UTC; tkeitt
 Repository: CRAN
-Date/Publication: 2017-02-16 17:57:09
+Date/Publication: 2017-03-29 16:16:39 UTC
